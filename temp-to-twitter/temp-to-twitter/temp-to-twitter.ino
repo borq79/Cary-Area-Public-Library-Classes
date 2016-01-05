@@ -20,9 +20,9 @@ DHT dht(DHT11PIN, DHT11);
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 // Fallback, static IP, in case DHCP fails
-IPAddress ip(192, 168, 0, 12);
+IPAddress ip(192, 168, 0, 12);  
 
-Twitter twitter("<<< your token here >>>");
+Twitter twitter("PUT YOUR TWITTER TOKEN KEY HERE");
 
 
 // Structure used to store ambient readings
@@ -62,14 +62,16 @@ void loop() {
 AMBIENT getAmbientReadings() {
   AMBIENT readings;
   
-  readings.temperature = dht.readHumidity();
-  readings.humidity = dht.readTemperature(READ_IN_FAHRENHEIT);
+  readings.humidity = dht.readHumidity();
+  readings.temperature = dht.readTemperature(READ_IN_FAHRENHEIT);
+
+  return readings;
 }
 
 void sendReadingsToTwitter(AMBIENT &readings) {
-  String twitterMessage = "Current Reading in the Library: The temperature is ";
+  String twitterMessage = "The Cary Area Public Library is currently ";
   twitterMessage.concat(readings.temperature);
-  twitterMessage += " degrees Fahrenheit and the humidity is ";
+  twitterMessage += " degrees Fahrenheit with a humidity of ";
   twitterMessage.concat(readings.humidity);
   twitterMessage += "%";
   Serial.println(twitterMessage.c_str());
