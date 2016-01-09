@@ -3,6 +3,8 @@
 uint32_t loopCounter = 0;
 
 void setup() {
+  Serial.begin(9600);
+  
   // put your setup code here, to run once:
   Serial.println("This is the setup function that will run only once at the start of the execution");
 }
