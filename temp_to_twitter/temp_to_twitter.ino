@@ -3,6 +3,12 @@
 #include <DHT.h>
 #include <Twitter.h>
 
+// Twitter allows 140 characters
+#define MAX_TWITTER_MESSAGE 140
+
+// The buffer that needs to hold the message needs an extra byte to store the NULL character
+#define TWITTER_MESSAGE_BUFFER_SIZE (MAX_TWITTER_MESSAGE + 1)
+
 // Digital pin that the DHT11 is connected to
 #define DHT11PIN 2
 
@@ -23,7 +29,6 @@ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 IPAddress ip(192, 168, 0, 12);  
 
 Twitter twitter("PUT YOUR TWITTER TOKEN KEY HERE");
-
 
 // Structure used to store ambient readings
 struct AMBIENT {
@@ -69,15 +74,22 @@ AMBIENT getAmbientReadings() {
 }
 
 void sendReadingsToTwitter(AMBIENT &readings) {
-  String twitterMessage = "The Cary Area Public Library is currently ";
-  twitterMessage.concat(readings.temperature);
-  twitterMessage += " degrees Fahrenheit with a humidity of ";
-  twitterMessage.concat(readings.humidity);
-  twitterMessage += "%";
-  Serial.println(twitterMessage.c_str());
+  char twitterMessage[TWITTER_MESSAGE_BUFFER_SIZE];
+  char temperatureString[10];
+  char humidityString[10];
+  
+  // Convert the temperature and humidity to strings so they can be printed
+  dtostrf(readings.temperature, 4, 2, temperatureString);
+  dtostrf(readings.humidity, 4, 2, humidityString);
+  
+  // Create the twitter message - it will crop it to 140 characters (MAX_TWITTER_MESSAGE) and ensure the NULL is in place (why we add 1 to get TWITTER_MESSAGE_BUFFER_SIZE)
+  snprintf(twitterMessage, TWITTER_MESSAGE_BUFFER_SIZE, "The Cary Area Public Library is currently %s degrees Fahrenheit with a humidity of %s%%", temperatureString, humidityString);
+  
+  // Print for our own sake
+  Serial.println(twitterMessage);
 
   Serial.println("Connecting to the Twitter Arduino proxy ...");
-  if (twitter.post(twitterMessage.c_str())) {
+  if (twitter.post(twitterMessage)) {
     int status = twitter.wait();
     if (status == 200) {
       Serial.println("Success.");
