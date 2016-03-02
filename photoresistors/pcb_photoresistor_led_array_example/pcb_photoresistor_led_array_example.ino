@@ -3,57 +3,93 @@
 // Possible values are 0 - 1023 where 0 is the brightest and 1023 is the darkest
 #define SENSOR_ANALONG_PIN 0
 
-// Digital Pin used to read the digital output (dark = 0, not-dark = 1) from the PCB.
-#define SENSOR_DIGITAL_PIN 8
+// We will drive 5 PWM pins based on the input from the photoresitor. When using the analog
+// output from the PCB, drive the pin as a PWMs so that reflects the brightness of the
+// room. 
+#define LED_ARRAY_ELEMENT_0 5
+#define LED_ARRAY_ELEMENT_1 6
+#define LED_ARRAY_ELEMENT_2 9
+#define LED_ARRAY_ELEMENT_3 10
+#define LED_ARRAY_ELEMENT_4 11
 
-// We will drive pin 9 based on the input from the photoresitor. When using the analog
-// output from the PCB, drive the pin as a PWM so that reflects the brightness of the
-// room. When using the digital output of the PCB, drive pin 9 high or low depending
-// to turn the LED on or off - acts as a 'trip sensor'
-#define LED_PWM_PIN        9
+static int ledArray[5] = {LED_ARRAY_ELEMENT_0, LED_ARRAY_ELEMENT_1, LED_ARRAY_ELEMENT_2, LED_ARRAY_ELEMENT_3, LED_ARRAY_ELEMENT_4};
+static const int ARRAY_SIZE = sizeof(ledArray) / sizeof(int); 
 
 void setup() {
   // Init the serial communications for debugging messages
   Serial.begin(9600);
   
-  // Make the digital pin an input so we can read the values from the PCB D0 output
-  pinMode(SENSOR_DIGITAL_PIN, INPUT);
-  
-  // Make the PWM pin output so we can drive the LED
-  pinMode(LED_PWM_PIN, OUTPUT);
+  // Iterate over the array and set the PWM pins to output
+  for(int i = 0; i < ARRAY_SIZE; i++) {
+    pinMode(ledArray[i], OUTPUT);
+  }
 }
 
 void loop() {
   // *** Uncomment this line if the data line runs from A0 on the PCB to A0 on the Arduino
-  //analogSensorPin();
+  int brightness = readAnalogSensorPin();
   
-  // *** Uncomment this line if the data line runs from D0 on the PCB to pin 8 of the Arduino
-  //digitalSensorPin();
+  updateLedArray(brightness);
   
   // Add this delay so the output is trottled to something reasonable
-  delay(1000);
+  delay(50);
 }
 
-void analogSensorPin() {
+int readAnalogSensorPin() {
   // Read the value on the Analog pin - represents the value from the photoresistor PCB. Values are
   // 0 (bright) to 1023 (dark)
   int analogVal = analogRead(SENSOR_ANALONG_PIN);
   
-  // The PWM is 0-255, where 255 is 100% duty cycle and 0 is 0% duty cycle. To dim the LED when the
-  // photoresitor has the highest resistence (brightest) first divide by 4 (1024 scale to 256 scale)
-  // and then subtract that value from 255 (highest value) to convert from the photoresistor scale
-  // to the LED scale (0 is the brightest on the photoresistor, but 255 is brightest for the LED).
-  analogWrite(LED_PWM_PIN, 255 - (analogVal / 4));
-  
   Serial.println(analogVal); 
+  
+  return analogVal;
 }
  
-void digitalSensorPin() {
-  // This pin will either be on or off (1 or 0). You can adjust the screw on the PCB to adjust when the line is driven high or low.
-  int digitalVal = digitalRead(SENSOR_DIGITAL_PIN);
+void updateLedArray(int brightness) {
+  // The PWM is 0-255, where 255 is 100% duty cycle and 0 is 0% duty cycle. The photoresistor is brightest when
+  // it is a analog value of 0, and darkest when it is 1023. There are more clever ways to do this than 
+  // a straight up compare of the ranges, but this is clearer. If you want, you can look into bit shifting and 
+  // masking to allow for dynamic array size without changing the algorithim, just the array size.
+
   
-  // Write the respective value to the digital Arudino pin to turn the LED on or off 
-  digitalWrite(LED_PWM_PIN, digitalVal);
+  // Brightness values 820 - 1023 light up LED 0 and the others are off
+  // Brightness values 615 - 819 light up LEDs 0 and 1 and the others are off
+  // Brightness values 410 - 614 light up LEDs 0-2 and the others are off
+  // Brightness values 205 - 409 light up LEDs 0-3 and the others are off
+  // Brightness values 0 - 204 light up LEDs 0-4
   
-  Serial.println(digitalVal);   
+  int led0Brightness = 0;
+  int led1Brightness = 0;
+  int led2Brightness = 0;
+  int led3Brightness = 0;
+  int led4Brightness = 0;
+  
+  if (brightness >= 820 && brightness <= 1023) {
+    led0Brightness = (int)((float)brightness * 1.25);
+  } else if (brightness >= 615 && brightness <= 819) {
+    led0Brightness = 255;
+    led1Brightness = (int)((float)(brightness - 205) * 1.25);
+  } else if (brightness >= 410 && brightness <= 614) {
+    led0Brightness = led1Brightness = 255;
+    led2Brightness = (int)((float)(brightness - 410) * 1.25);
+  } else if (brightness >= 205 && brightness <= 409) {
+    led0Brightness = led1Brightness = led2Brightness = 255;
+    led3Brightness = (int)((float)(brightness - 615) * 1.25);
+  } else if (brightness <= 204) {
+    led0Brightness = led1Brightness = led2Brightness = led3Brightness = 255;
+    led4Brightness = (int)((float)(brightness - 820) * 1.25);
+  }
+  
+
+  Serial.println(led0Brightness);
+  Serial.println(led1Brightness);
+  Serial.println(led2Brightness);
+  Serial.println(led3Brightness);
+  Serial.println(led4Brightness);
+  
+  analogWrite(LED_ARRAY_ELEMENT_0, led0Brightness);
+  analogWrite(LED_ARRAY_ELEMENT_1, led1Brightness);
+  analogWrite(LED_ARRAY_ELEMENT_2, led2Brightness);
+  analogWrite(LED_ARRAY_ELEMENT_3, led3Brightness);
+  analogWrite(LED_ARRAY_ELEMENT_4, led4Brightness);
 }
