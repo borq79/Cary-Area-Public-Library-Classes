@@ -11,7 +11,7 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream
 //   NEO_KHZ400  400 KHz bitstream (e.g. FLORA pixels)
 //   NEO_KHZ800  800 KHz bitstream (e.g. High Density LED strip)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXEL, PRIMARY_PIN, NEO_RGB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXEL, PRIMARY_PIN, NEO_GRB + NEO_KHZ800);
 
 // 32-bit colors to cycle through
 static const uint32_t colors[] = { 0x00FF0000, 0x0000FF00, 0x000000FF, 0x00FF00FF, 0x00FFFF00, 0x0000FFFF };
@@ -40,21 +40,23 @@ void chase() {
     for(int pixelIndex = 0; pixelIndex < NUM_PIXEL; pixelIndex++ ) {
       strip.setPixelColor(pixelIndex, colors[colorIndex]);
       strip.show();
-      delay(500);
+      delay(200);
     }
   }
 }
 
 void fade() {
   for(uint32_t colorIndex = 0; colorIndex < numOfColors; colorIndex++) {
-    for(uint8_t brightness = 0; brightness < 255; brightness++) {
+    for(uint32_t brightness = 0; brightness < 255; brightness += 8) {
+      uint32_t brightness32Bit = (brightness & 0x0000FF) | ((brightness << 8) & 0x00FF00) | ((brightness << 16) & 0xFF0000);  
+      uint32_t mixedColor = colors[colorIndex] & brightness32Bit; 
+        
       for(uint32_t pixelIndex = 0; pixelIndex < NUM_PIXEL; pixelIndex++ ) {
-        uint32_t brightness32Bit = brightness | (brightness << 8) | (brightness << 16);  
-        uint32_t mixedColor = colors[colorIndex] & brightness32Bit; 
         strip.setPixelColor(pixelIndex, mixedColor);
       }
+      
       strip.show();
-      delay(500);
+      delay(50);
     }
   }
 }
