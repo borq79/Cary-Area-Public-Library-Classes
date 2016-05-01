@@ -32,18 +32,18 @@ struct CONDITION_INFO {
 
 // Weather Conditions to Color Mapping      
 #define SEVERE_WEATHER (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define STORMY         (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define WINTER_MIX     (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define SUNNY          (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define CLOUDY         (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define RAIN           (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define WINDY          (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define HAIL           (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define LOW_VISIBILITY (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define FAIR_DAY       (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define FAIR_NIGHT     (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define HOT            (CONDITION_INFO){0xFF, 0x00, 0x00, true}
-#define COLD           (CONDITION_INFO){0xFF, 0x00, 0x00, true}
+#define STORMY         (CONDITION_INFO){0xFF, 0x00, 0xFF, false}
+#define WINTER_MIX     (CONDITION_INFO){0x00, 0xFF, 0xFF, false}
+#define SUNNY          (CONDITION_INFO){0xFF, 0xFF, 0x00, false}
+#define CLOUDY         (CONDITION_INFO){0x80, 0x80, 0x80, false}
+#define RAIN           (CONDITION_INFO){0x00, 0xFF, 0x40, false}
+#define WINDY          (CONDITION_INFO){0xFF, 0x00, 0x00, false}
+#define HAIL           WINTER_MIX
+#define LOW_VISIBILITY (CONDITION_INFO){0xFF, 0x00, 0xFF, false}
+#define FAIR_DAY       (CONDITION_INFO){0x00, 0xFF, 0xBF, false}
+#define FAIR_NIGHT     (CONDITION_INFO){0x00, 0xBF, 0xFF, false}
+#define HOT            (CONDITION_INFO){0xFF, 0x80, 0x00, false}
+#define COLD           (CONDITION_INFO){0x00, 0x00, 0xFF, false}
 
 // ***********************************************************
 // * Function Prototypes
@@ -97,7 +97,12 @@ void loop() {
   GetWeatherByAddressChoreo.setAppKey(TEMBOO_APP_KEY);
 
   // Set Choreo inputs
-  String AddressValue = "60013";
+ // String AddressValue = "60013"; // Cary IL
+  String AddressValue = "70112"; // New Orleans
+ // String AddressValue = "94101"; // San Francisco
+ // String AddressValue = "10001"; // New York
+ // String AddressValue = "98101"; // Seattle
+ 
   GetWeatherByAddressChoreo.addInput("Address", AddressValue);
 
   // Identify the Choreo to run
@@ -136,7 +141,7 @@ void loop() {
 void displayCondition(CONDITION_INFO &condition) {
   Serial.println("Setting R, G, B to: " + String(condition.r) + ", " + String(condition.g) + ", " + String(condition.b));
   for (int i = 0; i < NUM_PIXEL; i++) {
-    strip.setPixelColor(i, condition.r, condition.b, condition.g);
+    strip.setPixelColor(i, condition.r, condition.g, condition.b);
   }
 
   strip.show();
