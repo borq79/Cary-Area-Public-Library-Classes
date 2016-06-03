@@ -5,7 +5,7 @@
 #define MAX_MESSAGE_SIZE 256
 
 // Digital pin that the DHT11 is connected to
-#define DHT11PIN 2
+#define DHT11PIN 13
 
 // Init the DHT11 Library
 DHT dht(DHT11PIN, DHT11);

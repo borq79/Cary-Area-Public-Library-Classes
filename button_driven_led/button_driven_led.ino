@@ -1,12 +1,12 @@
 #include <Adafruit_NeoPixel.h>
 
 // Three Buttons
-#define BUTTON_ONE_PIN 8
+#define BUTTON_ONE_PIN 7
 #define BUTTON_TWO_PIN 10
 #define BUTTON_THREE_PIN 12
 
 // NeoPixel Strip Information
-#define PRIMARY_PIN 5
+#define PRIMARY_PIN 2
 #define NUM_PIXEL 8
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_PIXEL, PRIMARY_PIN, NEO_GRB + NEO_KHZ800);
@@ -33,18 +33,24 @@ void loop() {
 
   Serial.println("B1: " + String(buttonOnePinValue) + " B2:" + String(buttonTwoPinValue) + " B3: " + String(buttonThreePinValue));
 
-  if (buttonOnePinValue == LOW && buttonTwoPinValue == HIGH && buttonThreePinValue == HIGH) {
+  if (buttonOnePinValue == HIGH && buttonTwoPinValue == HIGH && buttonThreePinValue == LOW) {
     Serial.println("Turn the Strip Purple");
     turnLEDStripPurple();
-  } else if (buttonTwoPinValue == LOW && buttonOnePinValue == HIGH && buttonThreePinValue == HIGH) {
+  } else if (buttonOnePinValue == HIGH && buttonTwoPinValue == LOW && buttonThreePinValue == HIGH) {
     Serial.println("Turn the Strip Green");
     turnLEDStripGreen();
-  } else if (buttonThreePinValue == LOW && buttonOnePinValue == HIGH && buttonTwoPinValue == HIGH) {
+  } else if (buttonOnePinValue == HIGH && buttonTwoPinValue == LOW && buttonThreePinValue == LOW) {
     Serial.println("Turn the Strip Blue");
     turnLEDStripBlue();
-  } else if (buttonOnePinValue == LOW && buttonTwoPinValue == HIGH && buttonThreePinValue == LOW) {
+  } else if (buttonOnePinValue == LOW && buttonTwoPinValue == HIGH && buttonThreePinValue == HIGH) {
     Serial.println("Turn the Strip Red");
     turnLEDStripRed();
+  } else if (buttonOnePinValue == LOW && buttonTwoPinValue == HIGH && buttonThreePinValue == LOW) {
+    Serial.println("Turn the Strip Orange");
+    turnLEDStripOrange();
+  } else if (buttonOnePinValue == LOW && buttonTwoPinValue == LOW && buttonThreePinValue == HIGH) {
+    Serial.println("Turn the Strip White");
+    turnLEDStripWhite();
   } else if (buttonOnePinValue == LOW && buttonTwoPinValue == LOW && buttonThreePinValue == LOW) {
     Serial.println("Turn the Strip Rainbow");
     turnLEDStripRainbow();
@@ -74,6 +80,14 @@ void turnLEDStripRed() {
 
 void turnLEDStripBlue() {
   setStripToSingleColor(0x00, 0x00, 0xFF);
+}
+
+void turnLEDStripOrange() {
+  setStripToSingleColor(0xFF, 0xA5, 0x00);
+}
+
+void turnLEDStripWhite() {
+  setStripToSingleColor(0xFF, 0xFF, 0xFF);
 }
 
 void turnLEDStripRainbow() {
