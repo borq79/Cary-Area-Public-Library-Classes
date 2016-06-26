@@ -1,27 +1,4 @@
-/*
-  note 	frequency
-  c     262 Hz
-  d     294 Hz
-  e     330 Hz
-  f     349 Hz
-  g     392 Hz
-  a     440 Hz
-  b     494 Hz
-  C     523 Hz
-
-For more information, see http://arduino.cc/en/Tutorial/Tone
-*/
-  
-#define BUZZER_PIN   11
-#define BUTTON_ONE   2
-#define BUTTON_TWO   4
-#define BUTTON_THREE 6
-#define LED_ONE      8
-#define LED_TWO      9
-#define LED_THREE    10
-
-
-#define MAX_SEQUENCE 15
+#include "simon.h"
 
 int sequenceCounter = 0;
 uint8_t sequence[MAX_SEQUENCE];
@@ -40,42 +17,32 @@ void setup()
   pinMode(LED_TWO, OUTPUT);
   pinMode(LED_THREE, OUTPUT);
 
-  generateSequence();
+  restartGame();
+  delay(2000);
+
+  gameOver();
+  
+  gameWon();
 }
 
 
 void loop() 
 {
-  int buttonOneValue = digitalRead(BUTTON_ONE);
-  int buttonTwoValue = digitalRead(BUTTON_TWO);
-  int buttonThreeValue = digitalRead(BUTTON_THREE);
-
- /* Serial.print("Button 1: "); Serial.println(buttonOneValue);
-  Serial.print("Button 2: "); Serial.println(buttonTwoValue);
-  Serial.print("Button 3: "); Serial.println(buttonThreeValue);
-
-
-  digitalWrite(LED_ONE, buttonOneValue == LOW ? HIGH : LOW);
-  digitalWrite(LED_TWO, buttonTwoValue == LOW ? HIGH : LOW);
-  digitalWrite(LED_THREE, buttonThreeValue == LOW ? HIGH : LOW);
-
-  int noteToPlay = buttonOneValue == LOW ? 294 : (buttonTwoValue == LOW ? 392 : (buttonThreeValue == LOW ? 523 : 0));
-  tone(BUZZER_PIN, noteToPlay, 2000);
-
-  delay(50);*/
-
-
   displaySequence();
-  delay(2000);
   sequenceCounter++;
+  
+  if (readUserInput() == false) {
+    gameOver();
+    restartGame();  
+  } else if (sequenceCounter == MAX_SEQUENCE) {
+    gameWon();
+  }
+}
 
-  displaySequence();
-  delay(2000);
-  sequenceCounter++;
-
-  displaySequence();
-  delay(2000);
-  sequenceCounter++;
+void restartGame() {
+  generateSequence();
+  sequenceCounter = 0;
+  playMusic(theme);
 }
 
 void generateSequence() {
@@ -116,7 +83,93 @@ void displaySequence() {
     
 }
 
-void readUserInput() {
+void gameOver() {
+  playMusic(gameover);
   
+  // Super Mario Brothers Game Over
+  /*tone(BUZZER_PIN, 523, 600); // C
+  tone(BUZZER_PIN, 494, 600); // G
+  tone(BUZZER_PIN, 440, 900); // E
+
+  tone(BUZZER_PIN, 494, 600); // B
+  tone(BUZZER_PIN, 440, 600); // A
+  tone(BUZZER_PIN, 494, 900); // B
+  tone(BUZZER_PIN, 440, 900); // A
+  tone(BUZZER_PIN, 494, 900); // B
+  tone(BUZZER_PIN, 440, 900); // A
+
+  tone(BUZZER_PIN, 392, 300); // G
+  tone(BUZZER_PIN, 349, 300); // F
+  tone(BUZZER_PIN, 330, 2000); // E*/
+
+  // Ending Lights
+
+  delay(5000);
+}
+
+void gameWon() {
+  // End song
+  playMusic(flagpole);
+  
+  // End lights
+
+  delay(5000);
+}
+
+bool readUserInput() {
+  int sequenceRemembered = true;
+  
+  int numberOfUserButtonPresses = 0;
+  int expectedUserButtonPresses = sequenceCounter;
+
+  while (numberOfUserButtonPresses < expectedUserButtonPresses) {
+    int buttonOneValue = digitalRead(BUTTON_ONE);
+    int buttonTwoValue = digitalRead(BUTTON_TWO);
+    int buttonThreeValue = digitalRead(BUTTON_THREE);
+
+    int buttonPressed = (buttonOneValue == LOW ? 1 : (buttonTwoValue == LOW ? 2 : (buttonThreeValue == LOW ? 3 : 0)));
+    if (buttonPressed > 0) {
+      if (sequence[numberOfUserButtonPresses] != buttonPressed) {
+        sequenceRemembered = false;
+        break;
+      }
+
+      numberOfUserButtonPresses++;
+    }
+  }
+
+  return sequenceRemembered;
+
+
+ /* Serial.print("Button 1: "); Serial.println(buttonOneValue);
+  Serial.print("Button 2: "); Serial.println(buttonTwoValue);
+  Serial.print("Button 3: "); Serial.println(buttonThreeValue); */
+
+  
+
+}
+
+
+// Borrowed these note arrays from https://github.com/tsukisan/Arduino/tree/master/WiiClassicSoundboard
+void playMusic(const int *song) {
+  if (song != NULL) {
+    int numberOfNotes = song[0];
+    
+    //Serial.print("# Notes: "); Serial.println(numberOfNotes);
+
+    for(int i = 1; i < (numberOfNotes * 2); i += 2) {
+      int note =  song[i];
+      int duration = song[i + 1];
+
+      Serial.print("Note: "); Serial.println(note);
+      Serial.print("Duration: "); Serial.println(duration);
+
+      int durationMs = 1000 / duration;
+      
+      tone(BUZZER_PIN, note, durationMs);
+      delay(durationMs * 1.30);
+      noTone(BUZZER_PIN); 
+    }
+  }
 }
 
