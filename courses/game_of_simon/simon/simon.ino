@@ -1,28 +1,40 @@
+#include <Adafruit_NeoPixel.h>
 #include "simon.h"
 
 int sequenceCounter = 0;
 uint8_t sequence[MAX_SEQUENCE];
 
+const int BUTTONS[] = { BUTTON_ONE, BUTTON_TWO, BUTTON_THREE, BUTTON_FOUR };
+const COLOR SIMON_COLORS[] = { PURPLE, RED, BLUE, GREEN };
+const int SIMON_NOTES[] = { NOTE_D4, NOTE_G4, NOTE_C5, NOTE_A5 };
+const COLOR GAME_TRANSITION_LIGHTS[] = {RED, BLUE, GREEN, YELLOW, PURPLE, WHITE, ORANGE, INDIGO};
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(SIZE_OF_NEO_PIXEL_BAR, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+
+// TODO annimation lights for game over, etc.
+// TODO read input timeout
+
 void setup() 
 {
+  // Initialize the new pixel strip library
+  strip.begin();
+
+  // Initialize all pixels to 'off'
+  strip.show();
+
+  // So we can debug ... if needed
   Serial.begin(9600);
-  
+
+  // Initialize the buzzer
   pinMode(BUZZER_PIN, OUTPUT);
 
-  pinMode(BUTTON_ONE, INPUT_PULLUP);
-  pinMode(BUTTON_TWO, INPUT_PULLUP);
-  pinMode(BUTTON_THREE, INPUT_PULLUP);
-
-  pinMode(LED_ONE, OUTPUT);
-  pinMode(LED_TWO, OUTPUT);
-  pinMode(LED_THREE, OUTPUT);
+  // The four buttons need pullup resistors so we can tell when the button is pressed
+  // Otherwise it falls back to high impedance 
+  for(int i =0 ; i < NUM_BUTTONS; i++) {
+    pinMode(BUTTONS[i], INPUT_PULLUP);
+  }
 
   restartGame();
-  delay(2000);
-
-  gameOver();
-  
-  gameWon();
 }
 
 
@@ -36,6 +48,9 @@ void loop()
     restartGame();  
   } else if (sequenceCounter == MAX_SEQUENCE) {
     gameWon();
+    restartGame(); 
+  } else {
+    delay(1500);
   }
 }
 
@@ -43,6 +58,7 @@ void restartGame() {
   generateSequence();
   sequenceCounter = 0;
   playMusic(theme);
+  delay(1500);
 }
 
 void generateSequence() {
@@ -50,7 +66,7 @@ void generateSequence() {
 
   Serial.println("Sequence ...");
   for(int i = 0; i < MAX_SEQUENCE; i++) {
-    uint8_t randNumber = (uint8_t)random(1, 4);
+    uint8_t randNumber = (uint8_t)random(0, 4);
     sequence[i] = randNumber;
     Serial.print(sequence[i]); Serial.print(",");
   }
@@ -61,58 +77,39 @@ void generateSequence() {
 
 void displaySequence() {
   for(int i = 0; i <= sequenceCounter; i++) {
-    uint8_t sequenceValue = sequence[i];
+    uint8_t simonIndex = sequence[i];
 
-    Serial.print("Sequence Value: "); Serial.println(sequenceValue);
+    Serial.print("Simon Index: "); Serial.println(simonIndex);
 
-    int ledPin = sequenceValue == 1 ? LED_ONE : (sequenceValue == 2 ? LED_TWO : LED_THREE);
-    int noteToPlay = ledPin == LED_ONE ? 294 : (ledPin == LED_TWO ? 392 : (ledPin == LED_THREE ? 523 : 0));
-
-    Serial.print("Note: "); Serial.println(noteToPlay);
-    Serial.print("LED: "); Serial.println(ledPin);
-
-    digitalWrite(ledPin, HIGH);
-    tone(BUZZER_PIN, noteToPlay, 500);
-
-    delay(500);
-
-    digitalWrite(LED_ONE, LOW);
-    digitalWrite(LED_TWO, LOW);
-    digitalWrite(LED_THREE, LOW);
+    showSequence(simonIndex);
+    delay(DISPLAY_PAUSE);
   }
     
 }
 
+void showSequence(int simonIndex) {
+  COLOR colorToShow = SIMON_COLORS[simonIndex];
+  int noteToPlay = SIMON_NOTES[simonIndex];
+
+  strip.setPixelColor(simonIndex, colorToShow.r, colorToShow.g, colorToShow.b);
+  strip.show();
+
+  Serial.print("Note: "); Serial.println(noteToPlay);
+  tone(BUZZER_PIN, noteToPlay, 500);
+  delay(500);
+
+  // Turn the light off
+  strip.setPixelColor(simonIndex, 0x00, 0x00, 0x00);
+  strip.show();
+}
+
 void gameOver() {
   playMusic(gameover);
-  
-  // Super Mario Brothers Game Over
-  /*tone(BUZZER_PIN, 523, 600); // C
-  tone(BUZZER_PIN, 494, 600); // G
-  tone(BUZZER_PIN, 440, 900); // E
-
-  tone(BUZZER_PIN, 494, 600); // B
-  tone(BUZZER_PIN, 440, 600); // A
-  tone(BUZZER_PIN, 494, 900); // B
-  tone(BUZZER_PIN, 440, 900); // A
-  tone(BUZZER_PIN, 494, 900); // B
-  tone(BUZZER_PIN, 440, 900); // A
-
-  tone(BUZZER_PIN, 392, 300); // G
-  tone(BUZZER_PIN, 349, 300); // F
-  tone(BUZZER_PIN, 330, 2000); // E*/
-
-  // Ending Lights
-
-  delay(5000);
+  delay(2000);
 }
 
 void gameWon() {
-  // End song
   playMusic(flagpole);
-  
-  // End lights
-
   delay(5000);
 }
 
@@ -122,31 +119,39 @@ bool readUserInput() {
   int numberOfUserButtonPresses = 0;
   int expectedUserButtonPresses = sequenceCounter;
 
-  while (numberOfUserButtonPresses < expectedUserButtonPresses) {
-    int buttonOneValue = digitalRead(BUTTON_ONE);
-    int buttonTwoValue = digitalRead(BUTTON_TWO);
-    int buttonThreeValue = digitalRead(BUTTON_THREE);
+  int startTime = millis();
+  int elapsedTime = 0;
 
-    int buttonPressed = (buttonOneValue == LOW ? 1 : (buttonTwoValue == LOW ? 2 : (buttonThreeValue == LOW ? 3 : 0)));
-    if (buttonPressed > 0) {
-      if (sequence[numberOfUserButtonPresses] != buttonPressed) {
+  while (numberOfUserButtonPresses < expectedUserButtonPresses && elapsedTime < USER_INPUT_TIMEOUT) {
+    int simonIndex = -1;
+    
+    for(int i = 0; i < NUM_BUTTONS; i++) {
+      int buttonValue = digitalRead(BUTTONS[i]);
+
+      if (buttonValue == LOW) {
+        simonIndex = i;
+        break;
+      }
+    }
+
+    if (simonIndex >= 0 && simonIndex < NUM_BUTTONS) {
+      showSequence(simonIndex);
+      if (sequence[numberOfUserButtonPresses] != simonIndex) {
         sequenceRemembered = false;
         break;
       }
 
       numberOfUserButtonPresses++;
     }
+
+    elapsedTime = millis() - startTime;
+  }
+
+  if (elapsedTime >= USER_INPUT_TIMEOUT) {
+    sequenceRemembered = false;
   }
 
   return sequenceRemembered;
-
-
- /* Serial.print("Button 1: "); Serial.println(buttonOneValue);
-  Serial.print("Button 2: "); Serial.println(buttonTwoValue);
-  Serial.print("Button 3: "); Serial.println(buttonThreeValue); */
-
-  
-
 }
 
 
@@ -155,21 +160,37 @@ void playMusic(const int *song) {
   if (song != NULL) {
     int numberOfNotes = song[0];
     
-    //Serial.print("# Notes: "); Serial.println(numberOfNotes);
-
     for(int i = 1; i < (numberOfNotes * 2); i += 2) {
       int note =  song[i];
       int duration = song[i + 1];
 
-      Serial.print("Note: "); Serial.println(note);
-      Serial.print("Duration: "); Serial.println(duration);
-
       int durationMs = 1000 / duration;
+
+      showLightBasedOnNote(note);
       
       tone(BUZZER_PIN, note, durationMs);
       delay(durationMs * 1.30);
       noTone(BUZZER_PIN); 
     }
   }
+
+  turnOffEntirePixelStrip();
+}
+
+void turnOffEntirePixelStrip() {
+    for(int i = 0; i < SIZE_OF_NEO_PIXEL_BAR; i++) {
+    strip.setPixelColor(i, 0x00, 0x00, 0x00);
+    strip.show();
+  }
+}
+
+void showLightBasedOnNote(int note) {
+  int brightness = note / 8;
+  for(int i = 0; i < SIZE_OF_NEO_PIXEL_BAR; i++) {
+    uint8_t randNumber = (uint8_t)random(0, 128);
+    brightness = brightness * randNumber;
+    strip.setPixelColor(i, brightness);
+  }
+  strip.show();
 }
 
