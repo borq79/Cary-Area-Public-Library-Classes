@@ -7,12 +7,8 @@ uint8_t sequence[MAX_SEQUENCE];
 const int BUTTONS[] = { BUTTON_ONE, BUTTON_TWO, BUTTON_THREE, BUTTON_FOUR };
 const COLOR SIMON_COLORS[] = { PURPLE, RED, BLUE, GREEN };
 const int SIMON_NOTES[] = { NOTE_D4, NOTE_G4, NOTE_C5, NOTE_A5 };
-const COLOR GAME_TRANSITION_LIGHTS[] = {RED, BLUE, GREEN, YELLOW, PURPLE, WHITE, ORANGE, INDIGO};
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(SIZE_OF_NEO_PIXEL_BAR, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
-
-// TODO annimation lights for game over, etc.
-// TODO read input timeout
 
 void setup() 
 {
@@ -58,7 +54,7 @@ void restartGame() {
   generateSequence();
   sequenceCounter = 0;
   playMusic(theme);
-  delay(1500);
+  delay(TRANSTION_TIME);
 }
 
 void generateSequence() {
@@ -81,13 +77,12 @@ void displaySequence() {
 
     Serial.print("Simon Index: "); Serial.println(simonIndex);
 
-    showSequence(simonIndex);
+    displaySingleSequenceItem(simonIndex);
     delay(DISPLAY_PAUSE);
   }
-    
 }
 
-void showSequence(int simonIndex) {
+void displaySingleSequenceItem(int simonIndex) {
   COLOR colorToShow = SIMON_COLORS[simonIndex];
   int noteToPlay = SIMON_NOTES[simonIndex];
 
@@ -105,12 +100,12 @@ void showSequence(int simonIndex) {
 
 void gameOver() {
   playMusic(gameover);
-  delay(2000);
+  delay(TRANSTION_TIME);
 }
 
 void gameWon() {
   playMusic(flagpole);
-  delay(5000);
+  delay(TRANSTION_TIME);
 }
 
 bool readUserInput() {
@@ -125,18 +120,11 @@ bool readUserInput() {
   while (numberOfUserButtonPresses < expectedUserButtonPresses && elapsedTime < USER_INPUT_TIMEOUT) {
     int simonIndex = -1;
     
-    for(int i = 0; i < NUM_BUTTONS; i++) {
-      int buttonValue = digitalRead(BUTTONS[i]);
+    int buttonPressed = getButtonUserPressed();
 
-      if (buttonValue == LOW) {
-        simonIndex = i;
-        break;
-      }
-    }
-
-    if (simonIndex >= 0 && simonIndex < NUM_BUTTONS) {
-      showSequence(simonIndex);
-      if (sequence[numberOfUserButtonPresses] != simonIndex) {
+    if (buttonPressed >= 0 && buttonPressed < NUM_BUTTONS) {
+      displaySingleSequenceItem(buttonPressed);
+      if (sequence[numberOfUserButtonPresses] != buttonPressed) {
         sequenceRemembered = false;
         break;
       }
@@ -154,6 +142,21 @@ bool readUserInput() {
   return sequenceRemembered;
 }
 
+
+int getButtonUserPressed() {
+  int buttonPressed = 0;
+  
+  for(int i = 0; i < NUM_BUTTONS; i++) {
+    int buttonValue = digitalRead(BUTTONS[i]);
+
+    if (buttonValue == LOW) {
+      buttonPressed = i;
+      break;
+    }
+  }
+
+  return buttonPressed;
+}
 
 // Borrowed these note arrays from https://github.com/tsukisan/Arduino/tree/master/WiiClassicSoundboard
 void playMusic(const int *song) {

@@ -10,6 +10,7 @@
 #define MAX_SEQUENCE       5
 #define DISPLAY_PAUSE      200
 #define USER_INPUT_TIMEOUT 5000
+#define TRANSTION_TIME     2000
 #define BUZZER_PIN         13
 
 
