@@ -33,15 +33,25 @@ void setup()
   restartGame();
 }
 
+
 void loop() 
 {
+  displaySequence();
+  sequenceCounter++;
+  
+  if (readUserInput() == false) {
+    restartGame();  
+  } else if (sequenceCounter == MAX_SEQUENCE) {
+    restartGame(); 
+  } else {
+    delay(1500);
+  }
 }
 
 void restartGame() {
   generateSequence();
   sequenceCounter = 0;
-  playMusic(theme);
-  delay(1500);
+  delay(TRANSTION_TIME);
 }
 
 void generateSequence() {
@@ -76,7 +86,7 @@ void displaySingleSequenceItem(int simonIndex) {
   strip.setPixelColor(simonIndex, colorToShow.r, colorToShow.g, colorToShow.b);
   strip.show();
 
-  Serial.print("Note: "); Serial.println(noteToPlay);
+ // Serial.print("Note: "); Serial.println(noteToPlay);
   tone(BUZZER_PIN, noteToPlay, 500);
   delay(500);
 
@@ -85,83 +95,56 @@ void displaySingleSequenceItem(int simonIndex) {
   strip.show();
 }
 
-void gameOver() {
-  playMusic(gameover);
-  delay(2000);
-}
-
-void gameWon() {
-  playMusic(flagpole);
-  delay(5000);
-}
-
 bool readUserInput() {
   int sequenceRemembered = true;
   
   int numberOfUserButtonPresses = 0;
   int expectedUserButtonPresses = sequenceCounter;
 
-  while (numberOfUserButtonPresses < expectedUserButtonPresses) {
+  int startTime = millis();
+  int elapsedTime = 0;
+
+Serial.print("N: "); Serial.println(numberOfUserButtonPresses);
+Serial.print("E: "); Serial.println(expectedUserButtonPresses);
+  while (numberOfUserButtonPresses < expectedUserButtonPresses && elapsedTime < USER_INPUT_TIMEOUT) {
     int simonIndex = -1;
     
-    for(int i = 0; i < NUM_BUTTONS; i++) {
-      int buttonValue = digitalRead(BUTTONS[i]);
+    int buttonPressed = getButtonUserPressed();
 
-      if (buttonValue == LOW) {
-        simonIndex = i;
-        break;
-      }
-    }
-
-    if (simonIndex >= 0 && simonIndex < NUM_BUTTONS) {
-      displaySingleSequenceItem(simonIndex);
-      if (sequence[numberOfUserButtonPresses] != simonIndex) {
+    if (buttonPressed >= 0 && buttonPressed < NUM_BUTTONS) {
+      displaySingleSequenceItem(buttonPressed);
+      if (sequence[numberOfUserButtonPresses] != buttonPressed) {
         sequenceRemembered = false;
         break;
       }
 
       numberOfUserButtonPresses++;
     }
+
+    elapsedTime = millis() - startTime;
   }
 
+  if (elapsedTime >= USER_INPUT_TIMEOUT) {
+    sequenceRemembered = false;
+  }
+
+Serial.print("R: "); Serial.println(sequenceRemembered);
   return sequenceRemembered;
 }
 
-// Borrowed these note arrays from https://github.com/tsukisan/Arduino/tree/master/WiiClassicSoundboard
-void playMusic(const int *song) {
-  if (song != NULL) {
-    int numberOfNotes = song[0];
-    
-    for(int i = 1; i < (numberOfNotes * 2); i += 2) {
-      int note =  song[i];
-      int duration = song[i + 1];
 
-      int durationMs = 1000 / duration;
+int getButtonUserPressed() {
+  int buttonPressed = -1;
+  
+  for(int i = 0; i < NUM_BUTTONS; i++) {
+    int buttonValue = digitalRead(BUTTONS[i]);
 
-      showLightBasedOnNote(note);
-      
-      tone(BUZZER_PIN, note, durationMs);
-      delay(durationMs * 1.30);
-      noTone(BUZZER_PIN); 
+    if (buttonValue == LOW) {
+      buttonPressed = i;
+      break;
     }
   }
 
-  turnOffEntirePixelStrip();
+  return buttonPressed;
 }
 
-void turnOffEntirePixelStrip() {
-    for(int i = 0; i < SIZE_OF_NEO_PIXEL_BAR; i++) {
-    strip.setPixelColor(i, 0x00, 0x00, 0x00);
-    strip.show();
-  }
-}
-
-void showLightBasedOnNote(int note) {
-  int brightness = note / 8;
-  for(int i = 0; i < SIZE_OF_NEO_PIXEL_BAR; i++) {
-    uint8_t randNumber = (uint8_t)random(0, 128);
-    brightness = brightness * randNumber;
-    strip.setPixelColor(i, brightness);
-  }
-  strip.show();
-}

@@ -1,8 +1,11 @@
 #include <Adafruit_NeoPixel.h>
 #include "simon.h"
 
+int sequenceCounter = 0;
+uint8_t sequence[MAX_SEQUENCE];
 
 const int BUTTONS[] = { BUTTON_ONE_PIN, BUTTON_TWO_PIN, BUTTON_THREE_PIN, BUTTON_FOUR_PIN };
+const COLOR SIMON_COLORS[] = { PURPLE, RED, BLUE, GREEN };
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(SIZE_OF_NEO_PIXEL_BAR, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
 
@@ -25,55 +28,104 @@ void setup()
   for(int i =0 ; i < NUM_BUTTONS; i++) {
     pinMode(BUTTONS[i], INPUT_PULLUP);
   }
+
 }
 
 void loop() 
 {
-  playMusic(theme);
-  delay(1500);
-  
-  playMusic(gameover);
-  delay(2000);
-
-  playMusic(flagpole);
+  generateSequence();
+  sequenceCounter = MAX_SEQUENCE - 1;
+  displaySequence(); 
   delay(5000);
 }
 
-// Borrowed these note arrays from https://github.com/tsukisan/Arduino/tree/master/WiiClassicSoundboard
-void playMusic(const int *song) {
-  if (song != NULL) {
-    int numberOfNotes = song[0];
+
+void generateSequence() {
+  randomSeed(analogRead(0));
+
+  Serial.println("Sequence ...");
+  for(int i = 0; i < MAX_SEQUENCE; i++) {
+    uint8_t randNumber = (uint8_t)random(0, 4);
+    sequence[i] = randNumber;
+    Serial.print(sequence[i]); Serial.print(",");
+  }
+  Serial.println("");
+
+  sequenceCounter = 0;
+}
+
+void displaySequence() {
+  for(int i = 0; i <= sequenceCounter; i++) {
+    uint8_t simonIndex = sequence[i];
+
+    Serial.print("Simon Index: "); Serial.println(simonIndex);
+
+    displaySingleSequenceItem(simonIndex);
+    delay(DISPLAY_PAUSE);
+  }
+}
+
+
+void displaySingleSequenceItem(int simonIndex) {
+  COLOR colorToShow = SIMON_COLORS[simonIndex]; 
+
+  strip.setPixelColor(simonIndex, colorToShow.r, colorToShow.g, colorToShow.b);
+  strip.show();
+
+  delay(500);
+
+  // Turn the light off
+  strip.setPixelColor(simonIndex, 0x00, 0x00, 0x00);
+  strip.show();
+}
+
+bool readUserInput() {
+  int sequenceRemembered = true;
+  
+  int numberOfUserButtonPresses = 0;
+  int expectedUserButtonPresses = sequenceCounter;
+  
+  while (numberOfUserButtonPresses < expectedUserButtonPresses) {
+    int simonIndex = -1;
     
-    for(int i = 1; i < (numberOfNotes * 2); i += 2) {
-      int note =  song[i];
-      int duration = song[i + 1];
+    int buttonPressed = getButtonUserPressed();
 
-      int durationMs = 1000 / duration;
+    if (buttonPressed >= 0 && buttonPressed < NUM_BUTTONS) {
+      displaySingleSequenceItem(buttonPressed);
+      if (sequence[numberOfUserButtonPresses] != buttonPressed) {
+        sequenceRemembered = false;
+        break;
+      }
 
-      showLightBasedOnNote(note);
-      
-      tone(BUZZER_PIN, note, durationMs);
-      delay(durationMs * 1.30);
-      noTone(BUZZER_PIN); 
+      numberOfUserButtonPresses++;
     }
   }
 
-  turnOffEntirePixelStrip();
+  return sequenceRemembered;
 }
 
-void turnOffEntirePixelStrip() {
-    for(int i = 0; i < SIZE_OF_NEO_PIXEL_BAR; i++) {
-    strip.setPixelColor(i, 0x00, 0x00, 0x00);
-    strip.show();
+int getButtonUserPressed() {
+  int buttonPressed = -1;
+  
+  for(int i = 0; i < NUM_BUTTONS; i++) {
+    int buttonValue = digitalRead(BUTTONS[i]);
+
+    if (buttonValue == LOW) {
+      buttonPressed = i;
+      break;
+    }
   }
+
+  return buttonPressed;
 }
 
-void showLightBasedOnNote(int note) {
-  int brightness = note / 8;
-  for(int i = 0; i < SIZE_OF_NEO_PIXEL_BAR; i++) {
-    uint8_t randNumber = (uint8_t)random(0, 128);
-    brightness = brightness * randNumber;
-    strip.setPixelColor(i, brightness);
-  }
+void lightUpFromButtonPress(int simonIndex) {
+  strip.setPixelColor(simonIndex, 0xFF, 0x00, 0xFF);
+  strip.show();
+
+  delay(500);
+
+  // Turn the light off
+  strip.setPixelColor(simonIndex, 0x00, 0x00, 0x00);
   strip.show();
 }

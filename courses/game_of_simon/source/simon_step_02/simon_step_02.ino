@@ -29,30 +29,39 @@ void setup()
 
 void loop() 
 {
-  playMusic(theme);
-  delay(1500);
-  
-  playMusic(gameover);
-  delay(2000);
-
-  playMusic(flagpole);
-  delay(5000);
+  readUserInput();
 }
 
-// Borrowed these note arrays from https://github.com/tsukisan/Arduino/tree/master/WiiClassicSoundboard
-void playMusic(const int *song) {
-  if (song != NULL) {
-    int numberOfNotes = song[0];
-    
-    for(int i = 1; i < (numberOfNotes * 2); i += 2) {
-      int note =  song[i];
-      int duration = song[i + 1];
+void readUserInput() {
+  int buttonPressed = getButtonUserPressed();
 
-      int durationMs = 1000 / duration;
-      
-      tone(BUZZER_PIN, note, durationMs);
-      delay(durationMs * 1.30);
-      noTone(BUZZER_PIN); 
+  if (buttonPressed >= 0 && buttonPressed < NUM_BUTTONS) {
+    lightUpFromButtonPress(buttonPressed);
+  }
+}
+
+int getButtonUserPressed() {
+  int buttonPressed = -1;
+  
+  for(int i = 0; i < NUM_BUTTONS; i++) {
+    int buttonValue = digitalRead(BUTTONS[i]);
+
+    if (buttonValue == LOW) {
+      buttonPressed = i;
+      break;
     }
   }
+
+  return buttonPressed;
+}
+
+void lightUpFromButtonPress(int simonIndex) {
+  strip.setPixelColor(simonIndex, 0xFF, 0x00, 0xFF);
+  strip.show();
+
+  delay(500);
+
+  // Turn the light off
+  strip.setPixelColor(simonIndex, 0x00, 0x00, 0x00);
+  strip.show();
 }

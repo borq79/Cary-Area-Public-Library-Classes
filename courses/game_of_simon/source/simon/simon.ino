@@ -4,7 +4,7 @@
 int sequenceCounter = 0;
 uint8_t sequence[MAX_SEQUENCE];
 
-const int BUTTONS[] = { BUTTON_ONE, BUTTON_TWO, BUTTON_THREE, BUTTON_FOUR };
+const int BUTTONS[] = { BUTTON_ONE_PIN, BUTTON_TWO_PIN, BUTTON_THREE_PIN, BUTTON_FOUR_PIN };
 const COLOR SIMON_COLORS[] = { PURPLE, RED, BLUE, GREEN };
 const int SIMON_NOTES[] = { NOTE_D4, NOTE_G4, NOTE_C5, NOTE_A5 };
 
@@ -89,7 +89,7 @@ void displaySingleSequenceItem(int simonIndex) {
   strip.setPixelColor(simonIndex, colorToShow.r, colorToShow.g, colorToShow.b);
   strip.show();
 
-  Serial.print("Note: "); Serial.println(noteToPlay);
+ // Serial.print("Note: "); Serial.println(noteToPlay);
   tone(BUZZER_PIN, noteToPlay, 500);
   delay(500);
 
@@ -144,7 +144,7 @@ bool readUserInput() {
 
 
 int getButtonUserPressed() {
-  int buttonPressed = 0;
+  int buttonPressed = -1;
   
   for(int i = 0; i < NUM_BUTTONS; i++) {
     int buttonValue = digitalRead(BUTTONS[i]);
